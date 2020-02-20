@@ -1,0 +1,28 @@
+{
+  "name": "providerjs",
+  "version": "0.0.3",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "rmdir /s /q bin & tsc --watch",
+    "package": "rmdir /s /q dist & tsc --build tsconfig-package.json"
+  },
+  "keywords": [
+    "javascript",
+    "provider",
+    "abstract",
+    "intercept"
+  ],
+  "author": "Adilson Manzoli Junior",
+  "license": "ISC",
+  "repository": "Cliveburr/providerjs",
+  "dependencies": {
+    "reflect-metadata": "^0.1.13",
+    "tslib": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^13.1.7",
+    "typescript": "^3.7.5"
+  }
+}

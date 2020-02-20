@@ -1,0 +1,6 @@
+
+.vscode/
+bin/
+src/
+tests/
+tsconfig*

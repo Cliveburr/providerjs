@@ -1,0 +1,11 @@
+{
+    "explorer.openEditors.visible": 0,
+    "typescript.referencesCodeLens.enabled": false,
+     "files.exclude": {
+        "node_modules": false,
+        "bin": false
+    },
+    "window.zoomLevel": 0,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+}
