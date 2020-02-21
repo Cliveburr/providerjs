@@ -1,5 +1,5 @@
-import { Injectable } from '../src/provider/injectable.decorator';
-import { AsRequestProvider } from '../src/provider/providers';
+import { Injectable, ProviderIdentify } from '../src/provider/injectable.decorator';
+import { AsRequestProvider, DefinedProvider } from '../src/provider/providers';
 import { Application } from '../src/module/application.decorator';
 import { Injector } from '../src/provider/injector';
 
@@ -14,16 +14,20 @@ export class OneService {
     }
 }
 
+const SOME_IDENTITY = 'SOME_IDENTITY';
+const CustomDiagnosticProvider = new DefinedProvider(SOME_IDENTITY, 'This is static value!');
+
 @Application({
     imports: [],
-    providers: [OneService],
+    providers: [OneService, CustomDiagnosticProvider],
     exports: []
 })
 export class OneModule {
 
     public constructor(
         oneService: OneService,
-        injector: Injector
+        injector: Injector,
+        @ProviderIdentify(SOME_IDENTITY) value: string
     ) {
         let valueFromOne = oneService.value;
         
@@ -37,5 +41,7 @@ export class OneModule {
         else {
             console.log('AsRequestProvider pass!');
         }
+
+        console.log('ProviderIdentify - ' + value);
     }
 }

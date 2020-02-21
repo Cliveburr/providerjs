@@ -30,17 +30,18 @@ export class Injector {
         return this.getIntern(identifier, true, [], ...customs);
     }
 
-    private getIntern(identifier: any, isNeed: boolean, resolving: Object[], ...customs: Array<IProviderContainer | IProvider>): any {
+    public getNotNeed(identifier: any, ...customs: Array<IProviderContainer | IProvider>): any {
+        return this.getIntern(identifier, false, [], ...customs);
+    }
 
+    private getIntern(identifier: any, isNeed: boolean, resolving: Object[], ...customs: Array<IProviderContainer | IProvider>): any {
         let provider: IProvider | undefined = undefined;
         if (customs && customs.length > 0) {
             provider = this.resolveIntern(identifier, customs);
         }
-
         if (!provider) {
             provider = this.resolveIntern(identifier, [this.container]);
         }
-
         if (!provider) {
             if (isNeed) {
                 throw 'Can\'t find provider for identifier: ' + identifier.toString();
@@ -77,20 +78,28 @@ export class Injector {
         let args = (Reflect.getOwnMetadata('design:paramtypes', target) || []) as any[];
 
         let objs = [];
-        for (let arg of args)
+        for (let i = 0; i < args.length; i++)
         {
-            let obj = this.getIntern(arg, false, resolving, ...customs);
+            let identify = <any>args[i];
+
+            let providerIdentifyKey = `provider:identify:undefined:${i.toString()}`;
+            let providerIdentify = Reflect.getOwnMetadata(providerIdentifyKey, target);
+            if (typeof providerIdentify != 'undefined') {
+                identify = providerIdentify;
+            }
+
+            let obj = this.getIntern(identify, false, resolving, ...customs);
             if (obj) {
                 objs.push(obj);
             }
             else {
-                let isRequired = Reflect.getOwnMetadata('required:is', target, arg);
-                if (isRequired) {
-                    throw 'Can\'t find provider for required argument: ' + arg;
-                }
-                else {
-                    objs.push(undefined);
-                }
+                // let isRequired = Reflect.getOwnMetadata('required:is', target, arg);
+                // if (isRequired) {
+                //     throw 'Can\'t find provider for required argument: ' + arg;
+                // }
+                // else {
+                //     objs.push(undefined);
+                // }
             }
         }
 

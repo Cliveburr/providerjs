@@ -12,7 +12,7 @@ export class ModuleInstance {
 
     public constructor(
         public container: IProviderContainer,
-        private injector: Injector,
+        public injector: Injector,
         cls: Object
     ) {
         (<any>cls).__module__ = this;

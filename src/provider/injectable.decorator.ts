@@ -18,3 +18,10 @@ export const Required = (): ParameterDecorator => {
         Reflect.defineMetadata('required:is', true, target, propertyKey);
     }
 }
+
+export const ProviderIdentify = (identify: any): ParameterDecorator => {
+    return (target: Object, propertyKey: string | symbol, parameterIndex: number) => {
+        let key = `provider:identify:${propertyKey?.toString()}:${parameterIndex.toString()}`;
+        Reflect.defineMetadata(key, identify, target);
+    }
+}
