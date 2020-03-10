@@ -1,6 +1,8 @@
 
 export interface InjectableData {
-    provider?: Object 
+    provider?: Object;
+    default?: boolean;
+    identity?: any;
 }
 
 export const Injectable = (data?: InjectableData): ClassDecorator => {
@@ -15,11 +17,12 @@ export const Injectable = (data?: InjectableData): ClassDecorator => {
 
 export const Required = (): ParameterDecorator => {
     return (target: Object, propertyKey: string | symbol, parameterIndex: number) => {
-        Reflect.defineMetadata('required:is', true, target, propertyKey);
+        let key = `required:is:${propertyKey?.toString()}:${parameterIndex.toString()}`;
+        Reflect.defineMetadata(key, true, target);
     }
 }
 
-export const ProviderIdentify = (identify: any): ParameterDecorator => {
+export const Identify = (identify: any): ParameterDecorator => {
     return (target: Object, propertyKey: string | symbol, parameterIndex: number) => {
         let key = `provider:identify:${propertyKey?.toString()}:${parameterIndex.toString()}`;
         Reflect.defineMetadata(key, identify, target);

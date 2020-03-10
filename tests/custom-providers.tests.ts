@@ -1,4 +1,4 @@
-import { Injectable, ProviderIdentify } from '../src/provider/injectable.decorator';
+import { Injectable, Identify } from '../src/provider/injectable.decorator';
 import { AsRequestProvider, DefinedProvider } from '../src/provider/providers';
 import { Application } from '../src/module/application.decorator';
 import { Injector } from '../src/provider/injector';
@@ -27,7 +27,7 @@ export class OneModule {
     public constructor(
         oneService: OneService,
         injector: Injector,
-        @ProviderIdentify(SOME_IDENTITY) value: string
+        @Identify(SOME_IDENTITY) value: string
     ) {
         let valueFromOne = oneService.value;
         

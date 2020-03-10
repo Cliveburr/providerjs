@@ -8,6 +8,11 @@ export interface InjectorContext {
     create(target: Object): any;
 }
 
+interface IResolveResult {
+    provider: IProvider;
+    container: IProviderContainer;
+}
+
 export class Injector {
     
     private interceptor: Interceptor;
@@ -35,14 +40,14 @@ export class Injector {
     }
 
     private getIntern(identifier: any, isNeed: boolean, resolving: Object[], ...customs: Array<IProviderContainer | IProvider>): any {
-        let provider: IProvider | undefined = undefined;
+        let result: IResolveResult | undefined = undefined;
         if (customs && customs.length > 0) {
-            provider = this.resolveIntern(identifier, customs);
+            result = this.resolveIntern(identifier, customs);
         }
-        if (!provider) {
-            provider = this.resolveIntern(identifier, [this.container]);
+        if (!result) {
+            result = this.resolveIntern(identifier, [this.container]);
         }
-        if (!provider) {
+        if (!result) {
             if (isNeed) {
                 throw 'Can\'t find provider for identifier: ' + identifier.toString();
             }
@@ -51,116 +56,133 @@ export class Injector {
             }
         }
 
-        let isResolving = resolving.indexOf(provider);
+        const isResolving = resolving.indexOf(result.provider);
         if (isResolving != -1) {
-            throw 'Circular dependencie detected on provider: ' + provider.toString();
+            throw 'Circular dependencie detected on provider: ' + result.provider.toString();
         }
-        resolving.push(provider);
+        resolving.push(result.provider);
 
-        let obj = provider.get({
+        const allCustom = new Array<IProviderContainer | IProvider>(result.container, ...customs);
+        const obj = result.provider.get({
             identifier,
-            create: (target: Object) => this.create(target, resolving, ...customs)
+            create: (target: Object) => this.create(target, resolving, allCustom)
         });
 
-        let index = resolving.indexOf(provider);
+        const index = resolving.indexOf(result.provider);
         resolving.splice(index, 1);
 
         return obj;
     }
 
-    private create(target: Object, resolving: Object[], ...customs: Array<IProviderContainer | IProvider>): any {
-
-        let isInjectable = Reflect.getOwnMetadata('injectable:is', target);
+    private create(target: Object, resolving: Object[], customs: Array<IProviderContainer | IProvider>): any {
+        const isInjectable = Reflect.getOwnMetadata('injectable:is', target);
         if (!isInjectable) {
             throw 'Injectable class need to be defined with Injectable decorator!';
         }
 
-        let args = (Reflect.getOwnMetadata('design:paramtypes', target) || []) as any[];
+        const args = (Reflect.getOwnMetadata('design:paramtypes', target) || []) as any[];
 
-        let objs = [];
+        const objs = [];
         for (let i = 0; i < args.length; i++)
         {
             let identify = <any>args[i];
 
-            let providerIdentifyKey = `provider:identify:undefined:${i.toString()}`;
-            let providerIdentify = Reflect.getOwnMetadata(providerIdentifyKey, target);
+            const providerIdentifyKey = `provider:identify:undefined:${i.toString()}`;
+            const providerIdentify = Reflect.getOwnMetadata(providerIdentifyKey, target);
             if (typeof providerIdentify != 'undefined') {
                 identify = providerIdentify;
             }
 
-            let obj = this.getIntern(identify, false, resolving, ...customs);
+            const obj = this.getIntern(identify, false, resolving, ...customs);
             if (obj) {
                 objs.push(obj);
             }
             else {
-                // let isRequired = Reflect.getOwnMetadata('required:is', target, arg);
-                // if (isRequired) {
-                //     throw 'Can\'t find provider for required argument: ' + arg;
-                // }
-                // else {
-                //     objs.push(undefined);
-                // }
+                const isRequiredKey = `required:is:undefined:${i.toString()}`;
+                const isRequired = Reflect.getOwnMetadata(isRequiredKey, target);
+                if (typeof isRequired != 'undefined' && isRequired) {
+                    throw 'Can\'t find provider for required argument: ' + identify;
+                }
+                else {
+                    objs.push(undefined);
+                }
             }
         }
 
-        let result = new (<ObjectConstructor>target)(...objs);
+        const result = new (<ObjectConstructor>target)(...objs);
         this.interceptor.applyProxy(target, result)
         return result;
     }
 
     public resolve(identifier: any, ...providers: Array<IProviderContainer | IProvider>): IProvider | undefined {
-        return this.resolveIntern(identifier, providers);
+        return this.resolveIntern(identifier, providers)?.provider;
     }
 
-    public resolveIntern(identifier: any, providers: Array<IProviderContainer | IProvider>): IProvider | undefined {
-
+    private resolveIntern(identifier: any, providers: Array<IProviderContainer | IProvider>): IResolveResult | undefined {
         if (providers.length > 0) {
             for (let provider of providers) {
                 if (this.isProvider(provider)) {
                     if (provider.identify(identifier)) {
-                        return provider;
+                        return {
+                            container: {
+                              providers: [provider]
+                            },
+                            provider
+                        };
                     }
                 }
                 else {
-                    if (provider.providers && provider.providers.length > 0) {
-                        let resolved = this.resolveIntern(identifier, provider.providers);
-                        if (resolved) {
-                            return resolved;
-                        }
-                    }
-                    if (provider.imports && provider.imports.length > 0) {
-                        for (let containerImpoted of provider.imports) {
-                            let provider = this.resolveImpoted(containerImpoted, identifier);
-                            if (provider) {
-                                return provider;
-                            }
-                        }
+                    const containerResolved = this.resolveContainer(identifier, provider);
+                    if (containerResolved) {
+                        return containerResolved;
                     }
                 }
             }
         }
-
         return undefined;
     }
 
-    private resolveImpoted(container: IProviderContainer, identifier: any): IProvider | undefined {
+    private resolveContainer(identifier: any, container: IProviderContainer): IResolveResult | undefined {
+        if (container.providers && container.providers.length > 0) {
+            for (let provider of container.providers) {
+                if (provider.identify(identifier)) {
+                    return {
+                        container,
+                        provider
+                    };
+                }
+            }
+        }
+        if (container.imports && container.imports.length > 0) {
+            for (let containerImpoted of container.imports) {
+                const provider = this.resolveImpoted(identifier, containerImpoted);
+                if (provider) {
+                    return provider;
+                }
+            }
+        }
+        return undefined;
+    }
 
+    private resolveImpoted(identifier: any, container: IProviderContainer): IResolveResult | undefined {
         if (container.exports) {
             for (let exported of container.exports) {
                 if (this.isProvider(exported)) {
                     if (exported.identify(identifier)) {
-                        return exported;
+                        return {
+                            provider: exported,
+                            container
+                        };
                     }
                 }
                 else {
-                    let provider = this.resolveIntern(identifier, [exported]);
-                    if (provider) {
-                        return provider;
+                    const providerInContainer = this.resolveContainer(identifier, exported);
+                    if (providerInContainer) {
+                        return providerInContainer;
                     }
                 }
             }
         }
-
         return undefined;
     }
 

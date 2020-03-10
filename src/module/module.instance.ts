@@ -29,7 +29,7 @@ export class ModuleInstance {
         this.generateExports(data.exports);
         this.generateInterceptors();
 
-        this.instance = injector.get(cls, new StaticProvider(cls, cls));
+        this.instance = injector.get(cls, new StaticProvider(cls, cls), this.container);
     }
 
     private generateImports(imports: Array<ImportType> | undefined): void {
