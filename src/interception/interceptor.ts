@@ -21,38 +21,35 @@ interface ProxyMethodContext {
 export class Interceptor {
 
     public interceptions: events.IInterceptEvent[];
-
     private proxyClsStructs: { [key: string]: ProxyClsStruct | undefined };
 
     constructor(
-        private injector: Injector
     ) {
         this.interceptions = [];
         this.proxyClsStructs = {};
     }
 
-    public applyProxy(cls: Object, instance: any): void {
-        let id = <string>Reflect.getOwnMetadata('interception:id', cls);
+    public applyProxy(cls: Object, instance: any, injector: Injector): void {
+        let id = <Symbol>Reflect.getOwnMetadata('interception:id', cls);
         if (!id) {
-            id = Symbol().toString();
+            id = Symbol();
             Reflect.defineMetadata('interception:id', id, cls);
-            let isIntercetor = Reflect.getOwnMetadata('interceptor:is', cls);
+            const isIntercetor = Reflect.getOwnMetadata('interceptor:is', cls);
             if (typeof isIntercetor != 'undefined') {
-                this.proxyClsStructs[id] = undefined;
+                this.proxyClsStructs[<any>id] = undefined;
             }
             else {
-                let struct = this.createStruct(cls, instance);
-                this.proxyClsStructs[id] = struct;
+                const struct = this.createStruct(cls, instance, injector);
+                this.proxyClsStructs[<any>id] = struct;
             }
         }
-
-        let struct = this.proxyClsStructs[id];
+        const struct = this.proxyClsStructs[<any>id];
         if (struct) {
             this.createProxy(struct, instance);
         }
     }
 
-    private createStruct(cls: Object, instance: any): ProxyClsStruct | undefined {
+    private createStruct(cls: Object, instance: any, injector: Injector): ProxyClsStruct | undefined {
         let methods = <ProxyMethodStruct[]>[];
         let propType = Object.getPrototypeOf(instance);
         let propNames = Object.getOwnPropertyNames(propType);
@@ -71,7 +68,7 @@ export class Interceptor {
                     for (let custom of customs) {
                         let intercept = <events.IInterceptEvent>Reflect.getMetadata('intercept:instance', custom);
                         if (typeof intercept == 'undefined') {
-                            intercept = this.injector.get(custom, new StaticProvider(custom));
+                            intercept = injector.get(custom, true, new StaticProvider(custom));
                             Reflect.defineMetadata('intercept:instance', intercept, custom);
                         }
                         customsInterceptions.push(intercept);
@@ -178,11 +175,13 @@ export class Interceptor {
         if (proxyContext.method.posevents && proxyContext.method.posevents.length > 0) {
             let context = <events.IInterceptPosEventContext>{
                 methodName: proxyContext.method.name,
-                arguments: args
+                arguments: args,
+                result: ret
             };
             for (let posevent of proxyContext.method.posevents) {
                 posevent(context);
             }
+            ret = context.result;
         }
         return ret;
     }

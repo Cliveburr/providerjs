@@ -1,91 +1,96 @@
-import { IProvider, StaticProvider } from '../provider/providers';
-import { IProviderContainer } from '../provider/provider.container';
+import { IProvider, StaticProvider, DefinedProvider } from '../provider/providers';
+import { ProviderContainer } from '../provider/provider.container';
 import { Injector } from '../provider/injector';
 import { ModuleData, ImportType, ExportType, ProviderType } from './module.decorator';
 import { InjectableData } from '../provider/injectable.decorator';
+import { ModuleStore } from './module.store';
 
-export class ModuleInstance {
+export class ModuleInstance extends ProviderContainer {
 
     public instance: any;
-
     private toMakeInterceptors?: Object[];
 
     public constructor(
-        public container: IProviderContainer,
-        public injector: Injector,
-        cls: Object
+        cls: Object,
+        private store: ModuleStore
     ) {
-        (<any>cls).__module__ = this;
+        super([], [], []);
 
-        let isModule = Reflect.getOwnMetadata('module:is', cls);
+        this.interceptor = store.interceptor;
+
+        const isModule = Reflect.getOwnMetadata('module:is', cls);
         if (!isModule) {
             throw 'Invalid module! ' + cls.toString();
         }
 
-        let data = <ModuleData>Reflect.getOwnMetadata('module:data', cls);
+        const data = <ModuleData>Reflect.getOwnMetadata('module:data', cls);
 
         this.generateImports(data.imports);
         this.generateProviders(data.providers);
         this.generateExports(data.exports);
         this.generateInterceptors();
 
-        this.instance = injector.get(cls, new StaticProvider(cls, cls), this.container);
+        this.instance = this.injector.get(cls, new StaticProvider(cls));
+        this.providers?.push(new DefinedProvider(cls, this.instance));
     }
 
     private generateImports(imports: Array<ImportType> | undefined): void {
         if (imports) {
-            if (!this.container.imports) {
-                this.container.imports = [];
-            }
-            this.generateImportsRecur(this.container.imports, imports);
+            this.generateImportsRecur(imports);
         }
     }
 
-    private generateImportsRecur(array: IProviderContainer[], imports: Array<ImportType>): void {
-        for (let impt of imports) {
+    private generateImportsRecur(imports: Array<ImportType>): void {
+        for (const impt of imports) {
             if (Array.isArray(impt)) {
-                this.generateImportsRecur(array, impt);
+                this.generateImportsRecur(impt);
             }
             else {
-                array.push(this.getInstance(impt).container);
+                this.imports?.push(this.store.getInstance(impt));
             }
         }
-    }
-
-    public getInstance(cls: Object): ModuleInstance {
-        let instance = (<any>cls).__module__;
-        if (!instance) {
-            instance = new ModuleInstance({}, this.injector, cls);
-        }
-        return instance;
     }
 
     private generateExports(expts: Array<ExportType> | undefined): void {
         if (expts) {
-            if (!this.container.exports) {
-                this.container.exports = [];
-            }
-            this.generateExportsRecur(this.container.exports, expts);
+            this.generateExportsRecur(expts);
         }
     }
 
-    private generateExportsRecur(array: Array<IProviderContainer | IProvider>, expots: Array<ExportType>): void {
+    private generateExportsRecur(expots: Array<ExportType>): void {
         for (let expt of expots) {
             if (Array.isArray(expt)) {
-                this.generateExportsRecur(array, expt);
+                this.generateExportsRecur(expt);
             }
             else {
-                if (this.injector.isProvider(expt)) {
-                    array.push(expt);
+                if (this.isProvider(expt)) {
+                    this.exports?.push(expt);
                 }
                 else {
-                    let provider = this.injector.resolve(expt, this.container);
-                    if (provider) {
-                        array.push(provider);
+                    const isModule = Reflect.getOwnMetadata('module:is', expt);
+                    if (typeof isModule != 'undefined' && isModule) {
+                        const inst = this.store.getInstance(expt);
+                        const inImport = this.imports?.find(i => i === inst);
+                        if (!inImport) {
+                            throw 'Need to import a module to export it! ' + expt;
+                        }
+                        this.exports?.push(inst);
+                        continue;
                     }
-                    else {
-                        array.push(this.getInstance(expt).container);
+            
+                    const isInjectable = Reflect.getOwnMetadata('injectable:is', expt);
+                    if (typeof isInjectable != 'undefined' && isInjectable && this.providers) {
+                        const resolved = super.resolveDirect(expt, this.providers);
+                        if (resolved) {
+                            this.exports?.push(resolved.provider);
+                        }
+                        else {
+                            throw 'Exported class not found in providers! ' + expt;
+                        }
+                        continue;
                     }
+
+                    throw 'Only Module and Injectable class can be expoted! ' + expt;
                 }
             }
         }
@@ -94,34 +99,29 @@ export class ModuleInstance {
     private generateProviders(providers: Array<ProviderType> | undefined): void {
         if (providers) {
             this.toMakeInterceptors = [];
-            if (!this.container.providers) {
-                this.container.providers = [];
-            }
-            this.generateProvidersRecur(this.container.providers, providers);
+            this.generateProvidersRecur(providers);
         }
     }
 
-    private generateProvidersRecur(array: IProvider[], providers: Array<ProviderType>): void {
-        for (let provider of providers) {
+    private generateProvidersRecur(providers: Array<ProviderType>): void {
+        for (const provider of providers) {
             if (Array.isArray(provider)) {
-                this.generateProvidersRecur(array, provider);
+                this.generateProvidersRecur(provider);
             }
             else {
-                if (this.injector.isProvider(provider)) {
-                    array.push(provider);
+                if (this.isProvider(provider)) {
+                    this.providers?.push(provider);
                 }
                 else {
-                    let isInjectable = Reflect.getOwnMetadata('injectable:is', provider);
+                    const isInjectable = Reflect.getOwnMetadata('injectable:is', provider);
                     if (typeof isInjectable == 'undefined') {
                         throw 'Injectable class need to be defined with Injectable decorator!';
                     }
 
-                    let providerInstance = this.createProviderFromObject(provider);
-                    if (array.indexOf(providerInstance) == -1) {
-                        array.push(providerInstance);
-                    }
+                    const providerInstance = this.createProviderFromObject(provider);
+                    this.providers?.push(providerInstance);
 
-                    let isIntercetor = Reflect.getOwnMetadata('interceptor:is', provider);
+                    const isIntercetor = Reflect.getOwnMetadata('interceptor:is', provider);
                     if (typeof isIntercetor != 'undefined') {
                         this.toMakeInterceptors?.push(provider);
                     }
@@ -131,10 +131,18 @@ export class ModuleInstance {
     }
 
     private createProviderFromObject(cls: Object): IProvider {
-        let data = <InjectableData>Reflect.getOwnMetadata('injectable:data', cls);
+        const data = <InjectableData>Reflect.getOwnMetadata('injectable:data', cls);
         if (data) {
             if (data.provider) {
-                return new (<any>data.provider)(cls);
+                if (this.isProvider(data.provider)) {
+                    return data.provider;
+                }
+                else {
+                    return new (<any>data.provider)(cls);
+                }
+            }
+            if (data.identity) {
+                return new StaticProvider(data.identity, cls);
             }
         }
         return new StaticProvider(cls);
@@ -144,7 +152,7 @@ export class ModuleInstance {
         if (this.toMakeInterceptors && this.toMakeInterceptors.length > 0) {
             for (let make of this.toMakeInterceptors) {
                 let inter = this.injector.get(make);
-                this.injector.interceptions.push(inter);
+                this.interceptor?.interceptions.push(inter);
             }
         }
     }

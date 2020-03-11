@@ -1,4 +1,8 @@
-import { InjectorContext } from './injector';
+
+export interface InjectorContext {
+    identifier: any;
+    create(target: Object): any;
+}
 
 export interface IProvider {
     identify: (identifier: any) => boolean;

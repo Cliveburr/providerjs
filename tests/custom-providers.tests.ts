@@ -1,5 +1,5 @@
 import { Injectable, Identify } from '../src/provider/injectable.decorator';
-import { AsRequestProvider, DefinedProvider } from '../src/provider/providers';
+import { AsRequestProvider, DefinedProvider, IProvider } from '../src/provider/providers';
 import { Application } from '../src/module/application.decorator';
 import { Injector } from '../src/provider/injector';
 
@@ -15,11 +15,19 @@ export class OneService {
 }
 
 const SOME_IDENTITY = 'SOME_IDENTITY';
-const CustomDiagnosticProvider = new DefinedProvider(SOME_IDENTITY, 'This is static value!');
+const SOME_VALUE = 'This is static value!';
+const CustomDiagnosticProvider = new DefinedProvider(SOME_IDENTITY, SOME_VALUE);
+
+const DIRECT_IDENTITY = 'DIRECT_IDENTITY';
+const DIRECT_VALUE = 'This is direct identity';
+const CustomDirectProvider: IProvider = {
+    identify: (identifier) => identifier === DIRECT_IDENTITY,
+    get: (ctx) => DIRECT_VALUE
+};
 
 @Application({
     imports: [],
-    providers: [OneService, CustomDiagnosticProvider],
+    providers: [OneService, CustomDiagnosticProvider, CustomDirectProvider],
     exports: []
 })
 export class OneModule {
@@ -27,13 +35,12 @@ export class OneModule {
     public constructor(
         oneService: OneService,
         injector: Injector,
-        @Identify(SOME_IDENTITY) value: string
+        @Identify(SOME_IDENTITY) value: string,
+        @Identify(DIRECT_IDENTITY) direct_value: string
     ) {
-        let valueFromOne = oneService.value;
-        
-        let anotherOneService = injector.get(OneService);
-
-        let valueFromAnother = anotherOneService.value;
+        const valueFromOne = oneService.value;
+        const anotherOneService = injector.get(OneService);
+        const valueFromAnother = anotherOneService.value;
 
         if (valueFromOne == valueFromAnother) {
             console.error('AsRequestProvider fail!');
@@ -42,6 +49,12 @@ export class OneModule {
             console.log('AsRequestProvider pass!');
         }
 
-        console.log('ProviderIdentify - ' + value);
+        if (value != SOME_VALUE) {
+            console.error('Error: ProviderIdentify - ' + value);
+        }
+
+        if (direct_value != DIRECT_VALUE) {
+            console.error('Error: DirectIdentify - ' + direct_value);
+        }
     }
 }

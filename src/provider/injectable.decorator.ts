@@ -1,7 +1,6 @@
 
 export interface InjectableData {
     provider?: Object;
-    default?: boolean;
     identity?: any;
 }
 

@@ -21,6 +21,7 @@ export class FirstInterception implements IInterceptPreEvent, IInterceptPosEvent
     
     public posEvent(context: IInterceptPosEventContext): void {
         console.log(context.methodName + ' pos event');
+        context.result = 'Intercepted! ' + context.result;
     }
 }
 
@@ -61,7 +62,10 @@ export class OneModule {
     public constructor(
         oneService: OneService
     ) {
-        let ret = oneService.methodOne('arg0', 'arg1');
+        const ret = oneService.methodOne('arg0', 'arg1');
+        if (!ret.startsWith('Intercepted!')) {
+            throw 'Not intercepted!';
+        }
         console.log('OneModule calls oneService.methodOne return: ' + ret);
 
         oneService.methodTwo();

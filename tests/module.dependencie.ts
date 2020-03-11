@@ -5,7 +5,7 @@ import { Application } from '../src/module/application.decorator';
 
 @Injectable()
 export class ThreeService {
-    public value = 'ThreeService';
+    public value3 = 'ThreeService';
 }
 
 @Module({
@@ -14,31 +14,31 @@ export class ThreeService {
     exports: [ThreeService]
 })
 export class ThreeModule {
-
-    constructor() {
-        console.log('ThreeModule constructor.');
-    }
 }
-
-
 
 
 @Injectable()
-export class TwoService {
-    public value = 'TwoService';
+export class FourService {
+    public value4 = 'FourService';
 }
+
+@Injectable()
+export class TwoService {
+    public value2 = 'TwoService';
+
+    public constructor(
+        public fourService: FourService
+    ) {
+    }
+}
+
 
 @Module({
     imports: [ThreeModule],
-    providers: [TwoService],
+    providers: [TwoService, FourService],
     exports: [ThreeModule, TwoService]
 })
 export class TwoModule {
-
-    public constructor(
-    ) {
-        console.log('TwoModule constructor.');
-    }
 }
 
 
@@ -47,7 +47,7 @@ export class TwoModule {
 
 @Injectable()
 export class OneService {
-    public value = 'OneService';
+    public value1 = 'OneService';
 }
 
 @Application({
@@ -62,8 +62,9 @@ export class OneModule {
         twoService: TwoService,
         threService: ThreeService,
     ) {
-        console.log('OneModule constructor: OneService: ' + oneService.value);
-        console.log('OneModule constructor: TwoService: ' + twoService.value);
-        console.log('ThreeService constructor: ThreeService: ' + threService.value);
+        console.log('OneModule constructor: OneService: ' + oneService.value1);
+        console.log('TwoModule constructor: TwoService: ' + twoService.value2);
+        console.log('TwoModule constructor: TwoService.FourService: ' + twoService.fourService.value4);
+        console.log('ThreeService constructor: ThreeService: ' + threService.value3);
     }
 }

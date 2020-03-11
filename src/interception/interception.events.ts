@@ -20,6 +20,7 @@ export interface IInterceptPreEvent extends IInterceptEvent {
 export interface IInterceptPosEventContext {
     arguments: Object[];
     methodName: string;
+    result: any;
 }
 
 export interface IInterceptPosEventDelegate {
