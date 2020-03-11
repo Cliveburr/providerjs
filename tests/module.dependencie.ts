@@ -14,6 +14,7 @@ export class ThreeService {
     exports: [ThreeService]
 })
 export class ThreeModule {
+    public modulevalue3 = 'ThreeModule';
 }
 
 
@@ -61,10 +62,12 @@ export class OneModule {
         oneService: OneService,
         twoService: TwoService,
         threService: ThreeService,
+        threeModule: ThreeModule
     ) {
         console.log('OneModule constructor: OneService: ' + oneService.value1);
         console.log('TwoModule constructor: TwoService: ' + twoService.value2);
         console.log('TwoModule constructor: TwoService.FourService: ' + twoService.fourService.value4);
         console.log('ThreeService constructor: ThreeService: ' + threService.value3);
+        console.log('ThreeModule value: ' + threeModule.modulevalue3);
     }
 }

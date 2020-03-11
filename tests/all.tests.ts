@@ -10,3 +10,4 @@ require('./custom-providers.tests');
 require('./interception.tests');
 
 require('./inside-modules.tests');
+

@@ -1,17 +1,19 @@
 import { ModuleInstance } from './module.instance';
 import { Interceptor } from '../interception/interceptor';
+import { ProviderContainer } from '../provider/provider.container';
 
 interface IStore {
     cls: Object;
     instance: ModuleInstance;
 }
 
-export class ModuleStore {
+export class ModuleStore extends ProviderContainer {
 
     private modules: IStore[] = [];
     public interceptor: Interceptor;
 
     public constructor() {
+        super();
         this.interceptor = new Interceptor();
     }
 

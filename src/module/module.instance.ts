@@ -30,8 +30,11 @@ export class ModuleInstance extends ProviderContainer {
         this.generateExports(data.exports);
         this.generateInterceptors();
 
+        this.imports.push(this.store);
         this.instance = this.injector.get(cls, new StaticProvider(cls));
-        this.providers.push(new DefinedProvider(cls, this.instance));
+        const myProvider = new DefinedProvider(cls, this.instance);
+        this.store.providers.push(myProvider);
+        this.store.exports.push(myProvider);
     }
 
     private generateImports(imports: Array<ImportType> | undefined): void {
