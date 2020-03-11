@@ -31,7 +31,7 @@ export class ModuleInstance extends ProviderContainer {
         this.generateInterceptors();
 
         this.instance = this.injector.get(cls, new StaticProvider(cls));
-        this.providers?.push(new DefinedProvider(cls, this.instance));
+        this.providers.push(new DefinedProvider(cls, this.instance));
     }
 
     private generateImports(imports: Array<ImportType> | undefined): void {
@@ -46,7 +46,7 @@ export class ModuleInstance extends ProviderContainer {
                 this.generateImportsRecur(impt);
             }
             else {
-                this.imports?.push(this.store.getInstance(impt));
+                this.imports.push(this.store.getInstance(impt));
             }
         }
     }
@@ -64,7 +64,7 @@ export class ModuleInstance extends ProviderContainer {
             }
             else {
                 if (this.isProvider(expt)) {
-                    this.exports?.push(expt);
+                    this.exports.push(expt);
                 }
                 else {
                     const isModule = Reflect.getOwnMetadata('module:is', expt);
@@ -74,7 +74,7 @@ export class ModuleInstance extends ProviderContainer {
                         if (!inImport) {
                             throw 'Need to import a module to export it! ' + expt;
                         }
-                        this.exports?.push(inst);
+                        this.exports.push(inst);
                         continue;
                     }
             
@@ -82,7 +82,7 @@ export class ModuleInstance extends ProviderContainer {
                     if (typeof isInjectable != 'undefined' && isInjectable && this.providers) {
                         const resolved = super.resolveDirect(expt, this.providers);
                         if (resolved) {
-                            this.exports?.push(resolved.provider);
+                            this.exports.push(resolved.provider);
                         }
                         else {
                             throw 'Exported class not found in providers! ' + expt;
@@ -110,7 +110,7 @@ export class ModuleInstance extends ProviderContainer {
             }
             else {
                 if (this.isProvider(provider)) {
-                    this.providers?.push(provider);
+                    this.providers.push(provider);
                 }
                 else {
                     const isInjectable = Reflect.getOwnMetadata('injectable:is', provider);
@@ -119,7 +119,7 @@ export class ModuleInstance extends ProviderContainer {
                     }
 
                     const providerInstance = this.createProviderFromObject(provider);
-                    this.providers?.push(providerInstance);
+                    this.providers.push(providerInstance);
 
                     const isIntercetor = Reflect.getOwnMetadata('interceptor:is', provider);
                     if (typeof isIntercetor != 'undefined') {

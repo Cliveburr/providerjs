@@ -16,22 +16,25 @@ interface IResolverResult {
 
 export class ProviderContainer {
 
+    public providers: Array<IProvider>;
+    public imports: Array<ProviderContainer>;
+    public exports: Array<ProviderContainer | IProvider>;
     public injector: Injector;
     public interceptor?: Interceptor;
 
     public constructor(
-        public providers?: Array<IProvider>,
-        public imports?: Array<ProviderContainer>,
-        public exports?: Array<ProviderContainer | IProvider>
+        providers?: Array<IProvider>,
+        imports?: Array<ProviderContainer>,
+        exports?: Array<ProviderContainer | IProvider>
     ) {
+        this.providers = providers || [];
+        this.imports = imports || [];
+        this.exports = exports || [];
         this.injector = this.makeInjector();
     }
 
     private makeInjector(): Injector {
-        if (!this.providers) {
-            this.providers = [];
-        }
-        const injector = new Injector(this.get.bind(this));
+        const injector = new Injector(this);
         this.providers.push(new DefinedProvider(Injector, injector));
         return injector;
     }
@@ -147,13 +150,13 @@ export class ProviderContainer {
                 return result;
             }
         }
-        if (this.providers && this.providers.length > 0) {
+        if (this.providers.length > 0) {
             const result = this.resolveDirect(ctx.identifier, this.providers);
             if (result) {
                 return result;
             }
         }
-        if (this.imports && this.imports.length > 0) {
+        if (this.imports.length > 0) {
             const result = this.resolveImport(ctx, this.imports);
             if (result) {
                 return result;
@@ -185,7 +188,7 @@ export class ProviderContainer {
     }
 
     private resolveExport(ctx: IGetContext): IResolverResult | undefined {
-        if (this.exports && this.exports.length > 0) {
+        if (this.exports.length > 0) {
             for (const exported of this.exports) {
                 if (this.isProvider(exported)) {
                     if (exported.identify(ctx.identifier)) {

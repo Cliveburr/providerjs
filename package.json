@@ -1,12 +1,12 @@
 {
   "name": "providerjs",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "rmdir /s /q bin & tsc --watch",
-    "package": "rmdir /s /q dist & tsc --build tsconfig-package.json"
+    "pack": "rmdir /s /q dist & tsc --build tsconfig-package.json"
   },
   "keywords": [
     "javascript",
