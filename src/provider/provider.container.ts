@@ -74,7 +74,7 @@ export class ProviderContainer {
         const resolved = this.resolveIntern(ctx);
         if (!resolved) {
             if (ctx.need) {
-                throw 'Can\'t find provider for identifier: ' + ctx.identifier.toString();
+                throw `Can\'t find provider for identifier:\n ${ctx.identifier.toString()}`;
             }
             else {
                 return undefined;

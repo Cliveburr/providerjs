@@ -136,11 +136,11 @@ export class Interceptor {
                 origen: instance[method.name]
             };
 
-            instance[method.name] = this.preMethodProx.bind(instance, proxyContext);
+            instance[method.name] = this.methodProx.bind(instance, proxyContext);
         }
     }
 
-    private preMethodProx(proxyContext: ProxyMethodContext, ...args: any[]): any {
+    private methodProx(proxyContext: ProxyMethodContext, ...args: any[]): any {
         if (proxyContext.method.preevents && proxyContext.method.preevents.length > 0) {
             let context = <events.IInterceptPreEventContext>{
                 methodName: proxyContext.method.name,

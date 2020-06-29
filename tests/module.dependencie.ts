@@ -2,6 +2,7 @@ import { Module } from '../src/module/module.decorator';
 import { Injectable } from '../src/provider/injectable.decorator';
 import { Application } from '../src/module/application.decorator';
 
+console.log('module.dependencie Begin');
 
 @Injectable()
 export class ThreeService {
@@ -71,3 +72,5 @@ export class OneModule {
         console.log('ThreeModule value: ' + threeModule.modulevalue3);
     }
 }
+
+console.log('module.dependencie Pass');

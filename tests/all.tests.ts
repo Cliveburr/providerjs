@@ -11,3 +11,6 @@ require('./interception.tests');
 
 require('./inside-modules.tests');
 
+require('./hot-import-module.tests');
+
+require('./token-injection.tests');

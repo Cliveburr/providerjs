@@ -4,6 +4,8 @@ import { Injectable, Required } from '../src/provider/injectable.decorator';
 import { StaticProvider, AsRequestProvider } from '../src/provider/providers';
 import { ProviderContainer } from '../src/provider/provider.container';
 
+console.log('provider.tests Begin');
+
 // creating containerOne
 const containerOne = new ProviderContainer([], [], []);
 

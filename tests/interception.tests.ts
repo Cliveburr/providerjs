@@ -4,6 +4,8 @@ import { IInterceptPreEvent, IInterceptPosEvent, IInterceptPreEventContext, IInt
     IInterceptErrorEventContext } from '../src/interception/interception.events';
 import { Interception, Intercept } from '../src/interception/interception.decorator';
 
+console.log('interception.tests Begin');
+
 @Interception()
 export class FirstInterception implements IInterceptPreEvent, IInterceptPosEvent {
     
@@ -71,3 +73,5 @@ export class OneModule {
         oneService.methodTwo();
     }
 }
+
+console.log('interception.tests Pass');

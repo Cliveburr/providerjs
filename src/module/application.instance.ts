@@ -13,7 +13,7 @@ export class ApplicationInstance {
             throw 'Invalid application! ' + cls.toString();
         }
 
-        const store = new ModuleStore();
-        this.module = store.getInstance(cls);
+        const store = new ModuleStore(cls);
+        this.module = store.context as ModuleInstance;
     }
 }

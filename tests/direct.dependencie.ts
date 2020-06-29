@@ -2,6 +2,8 @@ import { Injectable } from '../src/provider/injectable.decorator';
 import { Application } from '../src/module/application.decorator';
 import { Injector } from '../src/provider/injector';
 
+console.log('direct.dependencie Begin');
+
 @Injectable()
 export class OneService {
     public value = 'OneService';
@@ -40,3 +42,5 @@ export class OneModule {
         }
     }
 }
+
+console.log('direct.dependencie Pass');

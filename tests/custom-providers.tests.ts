@@ -3,6 +3,8 @@ import { AsRequestProvider, DefinedProvider, IProvider } from '../src/provider/p
 import { Application } from '../src/module/application.decorator';
 import { Injector } from '../src/provider/injector';
 
+console.log('custom-providers.tests Begin');
+
 @Injectable({
     provider: AsRequestProvider
 })
@@ -58,3 +60,5 @@ export class OneModule {
         }
     }
 }
+
+console.log('custom-providers.tests Pass');

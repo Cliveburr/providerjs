@@ -2,6 +2,8 @@ import { Injectable, Required } from '../src/provider/injectable.decorator';
 import { Application } from '../src/module/application.decorator';
 import { Module } from '../src/module/module.decorator';
 
+console.log('inside-modules.tests Begin');
+
 @Injectable()
 export class InsideOneService {
     public value = 'InsideOneService';
@@ -51,3 +53,5 @@ export class OneApplication {
         console.log('OneModule constructor: InsideTwoService: ' + oneService.insideTwoService.value);
     }
 }
+
+console.log('inside-modules.tests Pass');
