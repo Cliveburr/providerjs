@@ -14,6 +14,6 @@ export class ApplicationInstance {
         }
 
         const store = new ModuleStore(cls);
-        this.module = store.context as ModuleInstance;
+        this.module = store.context.imports[0] as ModuleInstance;
     }
 }
