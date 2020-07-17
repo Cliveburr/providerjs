@@ -7,6 +7,7 @@ interface IGetContext {
     need: boolean;
     resolving: Object[];
     customs?: IProvider[];
+    extraData?: any[];
 }
 
 interface IResolverResult {
@@ -39,35 +40,14 @@ export class ProviderContainer {
         return injector;
     }
 
-    public get(identifier: any, ...customs: IProvider[]): any;
-    public get(identifier: any, need: boolean, ...customs: IProvider[]): any;
-    public get(identifier: any, ...rest: any[]): any {
-        if (rest && rest.length > 0) {
-            if (typeof rest[0] === 'boolean') {
-                return this.getIntern({
-                    identifier,
-                    need: rest[0],
-                    resolving: [],
-                    customs: rest.slice(1)
-                });
-            }
-            else {
-                return this.getIntern({
-                    identifier,
-                    need: true,
-                    resolving: [],
-                    customs: rest
-                });
-            }
-        }
-        else {
-            return this.getIntern({
-                identifier,
-                need: true,
-                resolving: [],
-                customs: undefined
-            });
-        }
+    public get(identifier: any, need?: boolean, customs?: IProvider[], extraData?: any[]): any {
+        return this.getIntern({
+            identifier,
+            need: typeof need === 'undefined' ? true: need,
+            resolving: [],
+            customs,
+            extraData
+        });
     }
 
     private getIntern(ctx: IGetContext): any {
@@ -89,7 +69,8 @@ export class ProviderContainer {
 
         const obj = resolved.provider.get({
             identifier: ctx.identifier,
-            create: this.create.bind(resolved.container, ctx)  //(target: Object) => this.create(target, resolving, customs)
+            create: this.create.bind(resolved.container, ctx),
+            extraData: ctx.extraData
         });
 
         const index = ctx.resolving.indexOf(resolved.provider);
@@ -126,7 +107,8 @@ export class ProviderContainer {
                 identifier: identify,
                 need: isNeed,
                 resolving: ctx.resolving,
-                customs: ctx.customs
+                customs: ctx.customs,
+                extraData: ctx.extraData
             });
             if (obj) {
                 objs.push(obj);

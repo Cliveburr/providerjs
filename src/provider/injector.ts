@@ -10,10 +10,8 @@ export class Injector {
     ) {
     }
 
-    public get(identifier: any, ...customs: IProvider[]): any;
-    public get(identifier: any, need: boolean, ...customs: IProvider[]): any;
-    public get(identifier: any, ...rest: any[]): any {
-        return this.container.get(identifier, ...rest);
+    public get(identifier: any, need?: boolean, customs?: IProvider[], extraData?: any[]): any {
+        return this.container.get(identifier, need, customs, extraData);
     }
 
     public get imports(): Array<ProviderContainer> {

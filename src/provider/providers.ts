@@ -2,6 +2,7 @@
 export interface InjectorContext {
     identifier: any;
     create(target: Object): any;
+    extraData?: any[];
 }
 
 export interface IProvider {

@@ -1,6 +1,7 @@
 import { ModuleInstance } from './module.instance';
 import { Interceptor } from '../interception/interceptor';
 import { ProviderContainer } from '../provider/provider.container';
+import { setTimeout } from 'timers';
 
 export interface IDelayInstance {
     toMake: Array<() => void>;
@@ -19,16 +20,17 @@ export class ModuleStore {
     public hasHotImport: boolean;
 
     public constructor(
-        cls: Object
+        cls: Object,
+        appOnInit: () => void
     ) {
         this.modules = [];
         this.interceptor = new Interceptor();
         this.hasHotImport = false;
         this.context = new ProviderContainer();
-        this.generateAppModule(cls);
+        this.generateAppModule(cls, appOnInit);
     }
 
-    private generateAppModule(cls: Object): void {
+    private generateAppModule(cls: Object, appOnInit: () => void): void {
         const delayInstance: Array<() => void> = [];
 
         const appModule = new ModuleInstance(cls, this, delayInstance);
@@ -40,9 +42,12 @@ export class ModuleStore {
         this.context.imports.push(appModule);
         this.context.exports.push(appModule);
 
-        for (let i = 0; i < delayInstance.length; i++) {
-            delayInstance[i]();
-        }
+        setTimeout(() => {
+            for (let i = 0; i < delayInstance.length; i++) {
+                delayInstance[i]();
+            }
+            appOnInit();
+        }, 1);
     }
 
     public getInstance(cls: Object, delayInstance: Array<() => void> | undefined): ModuleInstance {

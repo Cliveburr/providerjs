@@ -36,7 +36,7 @@ export class ModuleInstance extends ProviderContainer {
     }
 
     private generateInstance(): void {
-        this.instance = this.injector.get(this.cls, new StaticProvider(this.cls));
+        this.instance = this.injector.get(this.cls, true, [new StaticProvider(this.cls)]);
         this.generateMyProvider();
     }
 

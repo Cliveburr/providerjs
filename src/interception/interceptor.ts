@@ -68,7 +68,7 @@ export class Interceptor {
                     for (let custom of customs) {
                         let intercept = <events.IInterceptEvent>Reflect.getMetadata('intercept:instance', custom);
                         if (typeof intercept == 'undefined') {
-                            intercept = injector.get(custom, true, new StaticProvider(custom));
+                            intercept = injector.get(custom, true, [new StaticProvider(custom)]);
                             Reflect.defineMetadata('intercept:instance', intercept, custom);
                         }
                         customsInterceptions.push(intercept);
