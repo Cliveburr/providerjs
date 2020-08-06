@@ -50,7 +50,7 @@ export class OneService {
 
     @Intercept(CatchCustomError)
     public methodTwo(): void {
-        throw 'methodTwo inside error!';
+        throw new Error('methodTwo inside error!');
     }
 }
 

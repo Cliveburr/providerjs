@@ -16,3 +16,5 @@ require('./hot-import-module.tests');
 require('./token-injection.tests');
 
 require('./extraData.tests');
+
+console.log('tests end!');

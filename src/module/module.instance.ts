@@ -27,11 +27,11 @@ export class ModuleInstance extends ProviderContainer {
         const data = <ModuleData>Reflect.getOwnMetadata('module:data', cls);
 
         this.imports.push(this.store.context);
+        this.generateHotImport();
         this.generateImports(data.imports, delayInstance);
         this.generateProviders(data.providers);
         this.generateExports(data.exports, delayInstance);
         this.generateInterceptors();
-        this.generateHotImport();
         delayInstance.push(this.generateInstance.bind(this));
     }
 
@@ -53,6 +53,7 @@ export class ModuleInstance extends ProviderContainer {
 
     public hotImport(imports: ImportType): void {
         this.generateImportsRecur([imports], undefined);
+        this.generateExportsRecur([imports], undefined);
     }
 
     private generateMyProvider(): void {
@@ -84,7 +85,7 @@ export class ModuleInstance extends ProviderContainer {
         }
     }
 
-    private generateExportsRecur(expots: Array<ExportType>, delayInstance: Array<() => void>): void {
+    private generateExportsRecur(expots: Array<ExportType>, delayInstance: Array<() => void> | undefined): void {
         for (let expt of expots) {
             if (Array.isArray(expt)) {
                 this.generateExportsRecur(expt, delayInstance);
