@@ -1,7 +1,8 @@
+import { InjectableData } from './injectable.decorator';
 
 export interface InjectorContext {
     identifier: any;
-    create(target: Object): any;
+    create(target: Object, providers?: IProvider[], extraData?: any[]): any;
     extraData?: any[];
 }
 
@@ -10,14 +11,28 @@ export interface IProvider {
     get: (context: InjectorContext) => any;
 }
 
-export class StaticProvider implements IProvider {
+export abstract class BasicProvider {
+
+    protected getCustomIdentity(cls: any): any | undefined {
+        const data = <InjectableData>Reflect.getOwnMetadata('injectable:data', cls);
+        return data?.identity;
+    }
+}
+
+export class StaticProvider extends BasicProvider implements IProvider {
     
-    public instance: any;
+    private instance: any;
+    private identifier: any;
+    private cls: any;
 
     public constructor(
-        public identifier: any,
-        public cls?: any
+        identifier: any,
+        cls?: any
     ) {
+        super();
+        this.cls = cls || identifier;
+        const dataIdentity = super.getCustomIdentity(this.cls);
+        this.identifier = dataIdentity || identifier;
     }
 
     public identify(identifier: any): boolean {
@@ -32,12 +47,17 @@ export class StaticProvider implements IProvider {
     }
 }
 
-export class DefinedProvider implements IProvider {
+export class DefinedProvider extends BasicProvider implements IProvider {
+
+    private identifier: any;
 
     public constructor(
-        public identifier: any,
+        identifier: any,
         public instance: any
     ) {
+        super();
+        const dataIdentity = super.getCustomIdentity(instance.constructor);
+        this.identifier = dataIdentity || identifier;
     }
 
     public identify(identifier: any): boolean {
@@ -49,12 +69,19 @@ export class DefinedProvider implements IProvider {
     }
 }
 
-export class AsRequestProvider implements IProvider {
+export class AsRequestProvider extends BasicProvider implements IProvider {
+
+    private identifier: any;
+    private cls: any;
 
     public constructor(
-        private identifier: any,
-        private cls?: Object
+        identifier: any,
+        cls?: Object
     ) {
+        super();
+        this.cls = cls || identifier;
+        const dataIdentity = super.getCustomIdentity(this.cls);
+        this.identifier = dataIdentity || identifier;
     }
 
     public identify(identifier: any): boolean {
@@ -62,6 +89,6 @@ export class AsRequestProvider implements IProvider {
     }
 
     public get(context: InjectorContext): any {
-        return context.create(this.cls || this.identifier);
+        return context.create(this.cls);
     }
 }

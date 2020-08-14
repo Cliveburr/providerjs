@@ -2,7 +2,9 @@ import { IProvider } from './providers';
 import { Injectable } from './injectable.decorator';
 import { ProviderContainer } from './provider.container';
 
-@Injectable()
+@Injectable({
+    crossProject: true
+})
 export class Injector {
 
     public constructor(

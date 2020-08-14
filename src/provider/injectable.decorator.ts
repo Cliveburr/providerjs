@@ -1,7 +1,9 @@
+import { genIdentifierHash } from '../helpers/hashgen';
 
 export interface InjectableData {
     provider?: Object;
     identity?: any;
+    crossProject?: boolean;
 }
 
 export const Injectable = (data?: InjectableData): ClassDecorator => {
@@ -9,6 +11,10 @@ export const Injectable = (data?: InjectableData): ClassDecorator => {
         Reflect.defineMetadata('injectable:is', true, target);
 
         if (data) {
+            if (data.crossProject) {
+                data.identity = genIdentifierHash(target.toString());
+            }
+
             Reflect.defineMetadata('injectable:data', data, target);
         }
     }

@@ -1,6 +1,8 @@
-import { IProvider, StaticProvider, DefinedProvider } from './providers';
+import { IProvider, DefinedProvider } from './providers';
 import { Injector } from './injector';
 import { Interceptor } from '../interception/interceptor';
+import { InjectableData } from './injectable.decorator';
+import { genIdentifierHash } from '../helpers/hashgen';
 
 interface IGetContext {
     identifier: any;
@@ -51,6 +53,13 @@ export class ProviderContainer {
     }
 
     private getIntern(ctx: IGetContext): any {
+        if (typeof ctx.identifier == 'function') {
+            const data = <InjectableData>Reflect.getOwnMetadata('injectable:data', ctx.identifier);
+            if (data && data.identity) {
+                ctx.identifier = data.identity;
+            }
+        }
+
         const resolved = this.resolveIntern(ctx);
         if (!resolved) {
             if (ctx.need) {
@@ -78,10 +87,10 @@ export class ProviderContainer {
         return obj;
     }
 
-    private create(ctx: IGetContext, target: Object): any {
+    private create(ctx: IGetContext, target: Object, providers?: IProvider[], extraData?: any[]): any {
         const isInjectable = Reflect.getOwnMetadata('injectable:is', target);
         if (!isInjectable) {
-            throw 'Injectable class need to be defined with Injectable decorator!';
+            throw 'Injectable class need to be defined with Injectable decorator!\n' + target.toString();
         }
 
         const args = (Reflect.getOwnMetadata('design:paramtypes', target) || []) as any[];
@@ -103,12 +112,38 @@ export class ProviderContainer {
                 isNeed = true;
             }
 
+            let deepCustomsProviders: IProvider[] | undefined;
+            if (providers && providers.length > 0) {
+                deepCustomsProviders = new Array<IProvider>().concat(providers);
+            }
+            if (ctx.customs && ctx.customs.length > 0) {
+                if (deepCustomsProviders) {
+                    deepCustomsProviders = deepCustomsProviders.concat(ctx.customs);
+                }
+                else {
+                    deepCustomsProviders = new Array<IProvider>().concat(ctx.customs);
+                }
+            }
+
+            let deepExtraData: any[] | undefined;
+            if (extraData && extraData.length > 0) {
+                deepExtraData = new Array<any>().concat(extraData);
+            }
+            if (ctx.extraData && ctx.extraData.length > 0) {
+                if (deepExtraData) {
+                    deepExtraData = deepExtraData.concat(ctx.extraData);
+                }
+                else {
+                    deepExtraData = new Array<any>().concat(ctx.extraData);
+                }
+            }
+
             const obj = this.getIntern({
                 identifier: identify,
                 need: isNeed,
                 resolving: ctx.resolving,
-                customs: ctx.customs,
-                extraData: ctx.extraData
+                customs: deepCustomsProviders,
+                extraData: deepExtraData
             });
             if (obj) {
                 objs.push(obj);

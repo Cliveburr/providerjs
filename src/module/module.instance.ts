@@ -149,7 +149,7 @@ export class ModuleInstance extends ProviderContainer {
                 else {
                     const isInjectable = Reflect.getOwnMetadata('injectable:is', provider);
                     if (typeof isInjectable == 'undefined') {
-                        throw 'Injectable class need to be defined with Injectable decorator!';
+                        throw 'Injectable class need to be defined with Injectable decorator!\n' + provider.toString();
                     }
 
                     const providerInstance = this.createProviderFromObject(provider);

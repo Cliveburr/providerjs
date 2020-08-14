@@ -17,4 +17,6 @@ require('./token-injection.tests');
 
 require('./extraData.tests');
 
+require('./deep-customs-providers.tests');
+
 console.log('tests end!');
