@@ -1,22 +1,22 @@
 
-require('./provider.tests');
+// require('./provider.tests');
 
-require('./direct.dependencie');
+// require('./direct.dependencie');
 
-require('./module.dependencie');
+// require('./module.dependencie');
 
-require('./custom-providers.tests');
+// require('./custom-providers.tests');
 
 require('./interception.tests');
 
-require('./inside-modules.tests');
+// require('./inside-modules.tests');
 
-require('./hot-import-module.tests');
+// require('./hot-import-module.tests');
 
-require('./token-injection.tests');
+// require('./token-injection.tests');
 
-require('./extraData.tests');
+// require('./extraData.tests');
 
-require('./deep-customs-providers.tests');
+// require('./deep-customs-providers.tests');
 
 console.log('tests end!');

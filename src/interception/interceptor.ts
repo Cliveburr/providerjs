@@ -50,33 +50,34 @@ export class Interceptor {
     }
 
     private createStruct(cls: Object, instance: any, injector: Injector): ProxyClsStruct | undefined {
-        let methods = <ProxyMethodStruct[]>[];
-        let propType = Object.getPrototypeOf(instance);
-        let propNames = Object.getOwnPropertyNames(propType);
+        const methods = <ProxyMethodStruct[]>[];
+        const propType = Object.getPrototypeOf(instance);
+        const propNames = Object.getOwnPropertyNames(propType);
+
+        const interceptions = this.interceptions.slice();
+
+        const interceptCustoms = <Object[] | undefined>Reflect.getOwnMetadata('intercept:customs', cls);
+        if (typeof interceptCustoms != 'undefined' && Array.isArray(interceptCustoms) && interceptCustoms.length > 0) {
+            for (let icObj of interceptCustoms) {
+                const intercept = this.getInterceptInstance(icObj, injector);
+                interceptions.push(intercept);
+            }
+        }
+
         for (let prop of propNames) {
             if (prop == 'constructor' || typeof instance[prop] !== 'function') {
                 continue;
             }
 
-            let interceptions = this.interceptions;
-
             let isIntercept = Reflect.getMetadata('intercept:is', propType, prop);
             if (typeof isIntercept != 'undefined') {
-                let customsInterceptions = <events.IInterceptEvent[]>[];
                 let customs = <Object[]>Reflect.getMetadata('intercept:customs', propType, prop);
-                if (typeof customs != 'undefined' && Array.isArray(customs)) {
+                if (typeof customs != 'undefined' && Array.isArray(customs) && customs.length > 0) {
                     for (let custom of customs) {
-                        let intercept = <events.IInterceptEvent>Reflect.getMetadata('intercept:instance', custom);
-                        if (typeof intercept == 'undefined') {
-                            intercept = injector.get(custom, true, [new StaticProvider(custom)]);
-                            Reflect.defineMetadata('intercept:instance', intercept, custom);
-                        }
-                        customsInterceptions.push(intercept);
+                        const intercept = this.getInterceptInstance(custom, injector);
+                        interceptions.push(intercept);
                     }
                 }
-
-                interceptions = interceptions
-                    .concat(customsInterceptions);
             }
 
             let interpre = <events.IInterceptPreEventDelegate[]>[];
@@ -114,6 +115,15 @@ export class Interceptor {
         }
     }
 
+    private getInterceptInstance(cls: Object, injector: Injector): events.IInterceptEvent {
+        let intercept = <events.IInterceptEvent>Reflect.getMetadata('intercept:instance', cls);
+        if (typeof intercept == 'undefined') {
+            intercept = injector.get(cls, true, [new StaticProvider(cls)]);
+            Reflect.defineMetadata('intercept:instance', intercept, cls);
+        }
+        return intercept;
+    }
+
     private isPreEvent(value: events.IInterceptEvent): value is events.IInterceptPreEvent {
         let test = <events.IInterceptPreEvent>value;
         return typeof test.isPreEventApply !== 'undefined' && typeof test.preEvent !== 'undefined';
@@ -133,10 +143,10 @@ export class Interceptor {
         for (let method of struct.methods) {
             let proxyContext = <ProxyMethodContext>{
                 method,
-                origen: instance[method.name]
+                origen: instance[method.name].bind(instance)
             };
 
-            instance[method.name] = this.methodProx.bind(instance, proxyContext);
+            instance[method.name] = this.methodProx.bind(this, proxyContext);
         }
     }
 
@@ -150,39 +160,70 @@ export class Interceptor {
                 preevent(context);
             }
         }
-        let ret = undefined;
+        let ret = <any>undefined;
+        const handlePost = () => {
+            if (proxyContext.method.posevents && proxyContext.method.posevents.length > 0) {
+                let context = <events.IInterceptPosEventContext>{
+                    methodName: proxyContext.method.name,
+                    arguments: args,
+                    result: ret
+                };
+                for (let posevent of proxyContext.method.posevents) {
+                    posevent(context);
+                }
+                ret = context.result;
+            }
+        }
         if (proxyContext.method.errorevents && proxyContext.method.errorevents.length > 0) {
-            try {
-                ret = proxyContext.origen(...args);
-            } catch (error) {
-                let context = <events.IInterceptErrorEventContext>{
+            const handleError = (error: any, reject: ((reason?: string) => void) | undefined) => {
+                const context = <events.IInterceptErrorEventContext>{
                     methodName: proxyContext.method.name,
                     arguments: args,
                     error,
                     raiseError: true
                 };
-                for (let preevent of proxyContext.method.errorevents) {
-                    preevent(context);
+                for (let errorevent of proxyContext.method.errorevents!) {
+                    errorevent(context);
                 }
                 if (context.raiseError) {
-                    throw error;
+                    if (reject) {
+                        reject(context.error);
+                    }
+                    else {
+                        throw context.error;
+                    }
                 }
+            }
+
+            try {
+                ret = proxyContext.origen(...args);
+                if (ret instanceof Promise) {
+                    return new Promise((eRet, rRet) => {
+                        Promise.resolve(ret)
+                            .then(value => {
+                                eRet(value);
+                                handlePost();
+                            })
+                            .catch(error => handleError(error, rRet));
+                    });
+                }
+            } catch (error) {
+                handleError(error, undefined);
             }
         }
         else {
             ret = proxyContext.origen(...args);
-        }
-        if (proxyContext.method.posevents && proxyContext.method.posevents.length > 0) {
-            let context = <events.IInterceptPosEventContext>{
-                methodName: proxyContext.method.name,
-                arguments: args,
-                result: ret
-            };
-            for (let posevent of proxyContext.method.posevents) {
-                posevent(context);
+            if (ret instanceof Promise) {
+                return new Promise((eRet, rRet) => {
+                    Promise.resolve(ret)
+                        .then(value => {
+                            eRet(value);
+                            handlePost();
+                        });
+                });
             }
-            ret = context.result;
         }
+        handlePost();
         return ret;
     }
 }

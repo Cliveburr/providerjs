@@ -17,3 +17,10 @@ export const Intercept = (...customs: IInterceptEvent[]): MethodDecorator => {
         Reflect.defineMetadata('intercept:customs', customs, target, propertyKey);
     }
 }
+
+export const InterceptClass = (...customs: IInterceptEvent[]): ClassDecorator => {
+    return (cls: Object) => {
+        Reflect.defineMetadata('intercept:is', true, cls);
+        Reflect.defineMetadata('intercept:customs', customs, cls);
+    }
+}
