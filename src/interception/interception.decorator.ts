@@ -1,6 +1,7 @@
 import { IInterceptEvent } from './interception.events';
+import { InjectableData } from '../provider/injectable.decorator';
 
-export class InterceptionData {
+export interface InterceptionData extends InjectableData {
 }
 
 export const Interception = (data?: InterceptionData): ClassDecorator => {

@@ -185,7 +185,7 @@ export class ModuleInstance extends ProviderContainer {
     private generateInterceptors(): void {
         if (this.interceptor && this.toMakeInterceptors && this.toMakeInterceptors.length > 0) {
             for (let make of this.toMakeInterceptors) {
-                let inter = this.injector.get(make);
+                const inter = this.injector.get(make);
                 this.interceptor.interceptions.push(inter);
             }
         }

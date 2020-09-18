@@ -1,7 +1,6 @@
 import { Injectable } from '../src/provider/injectable.decorator';
 import { Application } from '../src/module/application.decorator';
-import { IInterceptPreEvent, IInterceptPosEvent, IInterceptPreEventContext, IInterceptPosEventContext, IInterceptErrorEvent,
-    IInterceptErrorEventContext } from '../src/interception/interception.events';
+import { IInterceptPreEvent, IInterceptPosEvent, IInterceptErrorEvent, IInterceptEventContext } from '../src/interception/interception.events';
 import { Interception, Intercept, InterceptClass } from '../src/interception/interception.decorator';
 import * as fs from 'fs';
 
@@ -10,11 +9,13 @@ console.log('interception.tests Begin');
 @Interception()
 export class FirstInterception implements IInterceptPreEvent, IInterceptPosEvent {
     
+    private accessInstance = 6;
+
     public isPreEventApply(cls: any, methodName: string): boolean {
         return typeof cls.firstNotIntercept != 'undefined' ? cls.firstNotIntercept : true;
     }
     
-    public preEvent(context: IInterceptPreEventContext): void {
+    public preEvent(context: IInterceptEventContext): void {
         console.log(context.methodName + ' pre event');
     }
 
@@ -22,9 +23,15 @@ export class FirstInterception implements IInterceptPreEvent, IInterceptPosEvent
         return typeof cls.firstNotIntercept != 'undefined' ? cls.firstNotIntercept : true;
     }
     
-    public posEvent(context: IInterceptPosEventContext): void {
+    public posEvent(context: IInterceptEventContext): void {
         console.log(context.methodName + ' pos event');
-        context.result = 'Intercepted! ' + context.result;
+
+        if (context.methodName == 'testeAccessInterceptionInstance') {
+            context.result += this.accessInstance;
+        }
+        else {
+            context.result = 'Intercepted! ' + context.result;
+        }
     }
 }
 
@@ -35,9 +42,9 @@ export class CatchCustomError implements IInterceptErrorEvent {
         return true;
     }
     
-    public errorEvent(context: IInterceptErrorEventContext): void {
+    public errorEvent(context: IInterceptEventContext): void {
         console.log(context.methodName + ' CatchCustomError: ' + context.error);
-        context.raiseError = false;
+        context.throwError = false;
     }
 }
 
@@ -53,6 +60,10 @@ export class OneService {
     public methodTwo(): void {
         throw new Error('methodTwo inside error!');
     }
+
+    public testeAccessInterceptionInstance(): number {
+        return 6;
+    }
 }
 
 
@@ -63,9 +74,9 @@ export class ClassAsyncInterception implements IInterceptErrorEvent {
         return true;
     }
     
-    public errorEvent(context: IInterceptErrorEventContext): void {
+    public errorEvent(context: IInterceptEventContext): void {
         console.log('ClassAsyncInterception: ' + context.methodName + ' CatchCustomError: ' + context.error);
-        context.raiseError = false;
+        context.throwError = false;
     }
 }
 
@@ -89,7 +100,7 @@ export class ClassAsyncCatchInterception implements IInterceptErrorEvent {
         return true;
     }
     
-    public errorEvent(context: IInterceptErrorEventContext): void {
+    public errorEvent(context: IInterceptEventContext): void {
         console.log('ClassAsyncInterception: ' + context.methodName + ' CatchCustomError: ' + context.error);
     }
 }
@@ -99,8 +110,8 @@ export class ClassAsyncCatchInterception implements IInterceptErrorEvent {
 export class ClassAsynCatchcService {
 
     public firstNotIntercept = false;
-
-    public methodThrow(): Promise<void> {
+    
+    public methodThrowInMethod(): Promise<void> {
         return new Promise((e, r) => {
             fs.readFile(__dirname + '\\error.ts', r);
         })
@@ -131,14 +142,16 @@ export class OneModule {
 
         oneService.methodTwo();
 
-        this.callAsync()
-            .then();
+        const testAccessInstance = oneService.testeAccessInterceptionInstance();
+        if (testAccessInstance != 12) {
+            throw 'testeAccessInterceptionInstance fail!';
+        }
 
-        this.callErrorAsync()
-            .then();
+        Promise.resolve(this.callAsync());
+            
+        Promise.resolve(this.callErrorAsync());
 
-        this.callSuccessAscyn()
-            .then();
+        Promise.resolve(this.callSuccessAscyn());
     }
 
     public async callAsync(): Promise<void> {
@@ -147,7 +160,7 @@ export class OneModule {
 
     public async callErrorAsync(): Promise<void> {
         try {
-            await this.classAsynCatchcService.methodThrow();
+            await this.classAsynCatchcService.methodThrowInMethod();
         }
         catch (error) {
             console.log('Error async captured! ' + error);

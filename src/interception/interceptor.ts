@@ -1,127 +1,71 @@
 import * as events from './interception.events';
-import { Injector } from '../provider/injector';
-import { StaticProvider } from '../provider/providers';
+import { IProvider, StaticProvider } from '../provider/providers';
+import { IGetContext } from '../provider/provider.container';
+import { InterceptionData } from './interception.decorator';
 
-interface ProxyClsStruct {
-    methods: ProxyMethodStruct[];
-}
-
-interface ProxyMethodStruct {
-    name: string;
-    preevents?: events.IInterceptPreEventDelegate[];
-    posevents?: events.IInterceptPosEventDelegate[];
-    errorevents?: events.IInterceptErrorEventDelegate[];
+export interface ApplyProxyContext {
+    cls: Object;
+    instance: any;
+    getIntern: (ctx: IGetContext) => any;
+    resolving: Object[];
+    customs?: IProvider[];
+    extraData?: any[];
 }
 
 interface ProxyMethodContext {
-    method: ProxyMethodStruct;
-    origen: Function;
+    methodName: string;
+    funcs: events.IInterceptEventDelegate[];
 }
 
 export class Interceptor {
 
     public interceptions: events.IInterceptEvent[];
-    private proxyClsStructs: { [key: string]: ProxyClsStruct | undefined };
 
     constructor(
     ) {
         this.interceptions = [];
-        this.proxyClsStructs = {};
     }
 
-    public applyProxy(cls: Object, instance: any, injector: Injector): void {
-        let id = <Symbol>Reflect.getOwnMetadata('interception:id', cls);
-        if (!id) {
-            id = Symbol();
-            Reflect.defineMetadata('interception:id', id, cls);
-            const isIntercetor = Reflect.getOwnMetadata('interceptor:is', cls);
-            if (typeof isIntercetor != 'undefined') {
-                this.proxyClsStructs[<any>id] = undefined;
-            }
-            else {
-                const struct = this.createStruct(cls, instance, injector);
-                this.proxyClsStructs[<any>id] = struct;
-            }
+    private getInterceptInstance(cls: Object, ctx: ApplyProxyContext): events.IInterceptEvent {
+        let provider = <IProvider>Reflect.getOwnMetadata('interceptor:provider', cls);
+        if (!provider) {
+            provider = this.createProviderFromObject(cls);
+            Reflect.defineMetadata('interceptor:provider', provider, cls);
         }
-        const struct = this.proxyClsStructs[<any>id];
-        if (struct) {
-            this.createProxy(struct, instance);
+        const customProviders: IProvider[] = [provider];
+        if (ctx.customs) {
+            customProviders.push(...ctx.customs);
         }
+        return ctx.getIntern({
+            identifier: cls,
+            need: true,
+            resolving: ctx.resolving,
+            customs: customProviders,
+            extraData: ctx.extraData
+        });
     }
 
-    private createStruct(cls: Object, instance: any, injector: Injector): ProxyClsStruct | undefined {
-        const methods = <ProxyMethodStruct[]>[];
-        const propType = Object.getPrototypeOf(instance);
-        const propNames = Object.getOwnPropertyNames(propType);
-
-        const interceptions = this.interceptions.slice();
-
-        const interceptCustoms = <Object[] | undefined>Reflect.getOwnMetadata('intercept:customs', cls);
-        if (typeof interceptCustoms != 'undefined' && Array.isArray(interceptCustoms) && interceptCustoms.length > 0) {
-            for (let icObj of interceptCustoms) {
-                const intercept = this.getInterceptInstance(icObj, injector);
-                interceptions.push(intercept);
-            }
-        }
-
-        for (let prop of propNames) {
-            if (prop == 'constructor' || typeof instance[prop] !== 'function') {
-                continue;
-            }
-
-            let isIntercept = Reflect.getMetadata('intercept:is', propType, prop);
-            if (typeof isIntercept != 'undefined') {
-                let customs = <Object[]>Reflect.getMetadata('intercept:customs', propType, prop);
-                if (typeof customs != 'undefined' && Array.isArray(customs) && customs.length > 0) {
-                    for (let custom of customs) {
-                        const intercept = this.getInterceptInstance(custom, injector);
-                        interceptions.push(intercept);
-                    }
+    private createProviderFromObject(cls: Object): IProvider {
+        const data = <InterceptionData>Reflect.getOwnMetadata('injectable:data', cls);
+        if (data) {
+            if (data.provider) {
+                if (this.isProvider(data.provider)) {
+                    return data.provider;
+                }
+                else {
+                    return new (<any>data.provider)(cls);
                 }
             }
-
-            let interpre = <events.IInterceptPreEventDelegate[]>[];
-            let interpos = <events.IInterceptPosEventDelegate[]>[];
-            let intererror = <events.IInterceptErrorEventDelegate[]>[];
-            for (let intercept of interceptions) {
-                if (this.isPreEvent(intercept) && intercept.isPreEventApply(instance, prop)) {
-                    interpre.push(intercept.preEvent);
-                }
-                if (this.isPosEvent(intercept) && intercept.isPosEventApply(instance, prop)) {
-                    interpos.push(intercept.posEvent);
-                }
-                if (this.isErrorEvent(intercept) && intercept.isErrorEventApply(instance, prop)) {
-                    intererror.push(intercept.errorEvent);
-                }
-            }
-
-            if (interpre.length > 0 || interpos.length > 0 || intererror.length > 0) {
-                methods.push({
-                    name: prop,
-                    preevents: interpre.length > 0 ? interpre : undefined,
-                    posevents: interpos.length > 0 ? interpos : undefined,
-                    errorevents: intererror.length > 0 ? intererror : undefined
-                })
+            if (data.identity) {
+                return new StaticProvider(data.identity, cls);
             }
         }
-
-        if (methods.length > 0) {
-            return {
-                methods
-            };
-        }
-        else {
-            return undefined;
-        }
+        return new StaticProvider(cls);
     }
 
-    private getInterceptInstance(cls: Object, injector: Injector): events.IInterceptEvent {
-        let intercept = <events.IInterceptEvent>Reflect.getMetadata('intercept:instance', cls);
-        if (typeof intercept == 'undefined') {
-            intercept = injector.get(cls, true, [new StaticProvider(cls)]);
-            Reflect.defineMetadata('intercept:instance', intercept, cls);
-        }
-        return intercept;
+    private isProvider(value: any): value is IProvider {
+        return typeof (<IProvider>value).identify !== 'undefined'
+            && typeof (<IProvider>value).get !== 'undefined';
     }
 
     private isPreEvent(value: events.IInterceptEvent): value is events.IInterceptPreEvent {
@@ -139,91 +83,141 @@ export class Interceptor {
         return typeof test.isErrorEventApply !== 'undefined' && typeof test.errorEvent !== 'undefined';
     }
 
-    private createProxy(struct: ProxyClsStruct, instance: any): void {
-        for (let method of struct.methods) {
-            let proxyContext = <ProxyMethodContext>{
-                method,
-                origen: instance[method.name].bind(instance)
-            };
+    public applyProxy(ctx: ApplyProxyContext): void {
+        const propType = Object.getPrototypeOf(ctx.instance);
+        const propNames = Object.getOwnPropertyNames(propType);
 
-            instance[method.name] = this.methodProx.bind(this, proxyContext);
+        const isIntercetor = Reflect.getOwnMetadata('interceptor:is', propType.constructor);
+        if (typeof isIntercetor != 'undefined') {
+            return;
+        }
+
+        const interceptions = this.interceptions.slice();
+
+        const interceptCustoms = <Object[] | undefined>Reflect.getOwnMetadata('intercept:customs', ctx.cls);
+        if (typeof interceptCustoms != 'undefined' && Array.isArray(interceptCustoms) && interceptCustoms.length > 0) {
+            for (let icObj of interceptCustoms) {
+                const intercept = this.getInterceptInstance(icObj, ctx);
+                interceptions.push(intercept);
+            }
+        }
+
+        for (let prop of propNames) {
+            if (prop == 'constructor' || typeof ctx.instance[prop] !== 'function') {
+                continue;
+            }
+
+            const mehtodInterceptions = interceptions.slice();
+
+            const isIntercept = Reflect.getMetadata('intercept:is', propType, prop);
+            if (typeof isIntercept != 'undefined') {
+                let customs = <Object[]>Reflect.getMetadata('intercept:customs', propType, prop);
+                if (typeof customs != 'undefined' && Array.isArray(customs) && customs.length > 0) {
+                    for (let custom of customs) {
+                        const intercept = this.getInterceptInstance(custom, ctx);
+                        mehtodInterceptions.push(intercept);
+                    }
+                }
+            }
+
+            let hasIntercept = false;
+            const interpre = <events.IInterceptEventDelegate[]>[];
+            const interpos = <events.IInterceptEventDelegate[]>[];
+            const intererror = <events.IInterceptEventDelegate[]>[];
+            for (let intercept of mehtodInterceptions) {
+                if (this.isPreEvent(intercept) && intercept.isPreEventApply(ctx.instance, prop)) {
+                    interpre.push(intercept.preEvent.bind(intercept));
+                    hasIntercept = true;
+                }
+                if (this.isPosEvent(intercept) && intercept.isPosEventApply(ctx.instance, prop)) {
+                    interpos.push(intercept.posEvent.bind(intercept));
+                    hasIntercept = true;
+                }
+                if (this.isErrorEvent(intercept) && intercept.isErrorEventApply(ctx.instance, prop)) {
+                    intererror.push(intercept.errorEvent.bind(intercept));
+                    hasIntercept = true;
+                }
+            }
+
+            if (hasIntercept) {
+                const funcs: events.IInterceptEventDelegate[] = [];
+                if (interpre.length > 0) {
+                    funcs.push(...interpre);
+                }
+                funcs.push(this.callOriginMethod.bind(this, ctx.instance[prop].bind(ctx.instance)))
+                if (intererror.length > 0) {
+                    funcs.push(...intererror
+                        .map(ev => this.callHandleError.bind(this, ev)));
+                }
+                if (interpos.length > 0) {
+                    funcs.push(...interpos);
+                }
+
+                const proxyContext = <ProxyMethodContext>{
+                    methodName: prop,
+                    funcs
+                };
+                ctx.instance[prop] = this.methodProx.bind(this, proxyContext);
+            }
+        }
+    }
+
+    private callOriginMethod(origin: Function, context: events.IInterceptEventContext): void | Promise<void> {
+        try {
+            const ret = origin(...context.arguments);
+            if (ret instanceof Promise) {
+                return Promise.resolve(ret)
+                    .then(v => {
+                        context.result = v;
+                    })
+                    .catch(e => {
+                        context.error = e;
+                        context.throwError = true;
+                    })
+            }
+            else {
+                context.result = ret;
+            }
+        }
+        catch (error) {
+            context.error = error;
+            context.throwError = true;
+        }
+    }
+
+    private callHandleError(handler: events.IInterceptEventDelegate, context: events.IInterceptEventContext): void | Promise<void> {
+        if (context.error) {
+            return handler(context);
+        }
+    }
+    
+    private executeFuncs(context: events.IInterceptEventContext, index: number): void | Promise<void> {
+        if (index < context.funcs.length && !context.processed) {
+            const thisFunc = context.funcs[index];
+            const ret = thisFunc(context);
+            if (ret instanceof Promise) {
+                return Promise.resolve(ret)
+                    .then(this.executeFuncs.bind(this, context, index + 1))
+            }
+            else {
+                return this.executeFuncs(context, index + 1);
+            }
+        }
+        else {
+            if (context.throwError) {
+                throw context.error;
+            }
+            return context.result;
         }
     }
 
     private methodProx(proxyContext: ProxyMethodContext, ...args: any[]): any {
-        if (proxyContext.method.preevents && proxyContext.method.preevents.length > 0) {
-            let context = <events.IInterceptPreEventContext>{
-                methodName: proxyContext.method.name,
-                arguments: args
-            };
-            for (let preevent of proxyContext.method.preevents) {
-                preevent(context);
-            }
+        const context = <events.IInterceptEventContext>{
+            arguments: args,
+            methodName: proxyContext.methodName,
+            funcs: proxyContext.funcs,
+            processed: false
         }
-        let ret = <any>undefined;
-        const handlePost = () => {
-            if (proxyContext.method.posevents && proxyContext.method.posevents.length > 0) {
-                let context = <events.IInterceptPosEventContext>{
-                    methodName: proxyContext.method.name,
-                    arguments: args,
-                    result: ret
-                };
-                for (let posevent of proxyContext.method.posevents) {
-                    posevent(context);
-                }
-                ret = context.result;
-            }
-        }
-        if (proxyContext.method.errorevents && proxyContext.method.errorevents.length > 0) {
-            const handleError = (error: any, reject: ((reason?: string) => void) | undefined) => {
-                const context = <events.IInterceptErrorEventContext>{
-                    methodName: proxyContext.method.name,
-                    arguments: args,
-                    error,
-                    raiseError: true
-                };
-                for (let errorevent of proxyContext.method.errorevents!) {
-                    errorevent(context);
-                }
-                if (context.raiseError) {
-                    if (reject) {
-                        reject(context.error);
-                    }
-                    else {
-                        throw context.error;
-                    }
-                }
-            }
-
-            try {
-                ret = proxyContext.origen(...args);
-                if (ret instanceof Promise) {
-                    return new Promise((eRet, rRet) => {
-                        Promise.resolve(ret)
-                            .then(value => {
-                                eRet(value);
-                                handlePost();
-                            })
-                            .catch(error => handleError(error, rRet));
-                    });
-                }
-            } catch (error) {
-                handleError(error, undefined);
-            }
-        }
-        else {
-            ret = proxyContext.origen(...args);
-            if (ret instanceof Promise) {
-                return new Promise((eRet, rRet) => {
-                    Promise.resolve(ret)
-                        .then(value => {
-                            eRet(value);
-                            handlePost();
-                        });
-                });
-            }
-        }
-        handlePost();
-        return ret;
+        return this.executeFuncs(context, 0);
     }
 }

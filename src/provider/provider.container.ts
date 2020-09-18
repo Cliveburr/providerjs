@@ -2,9 +2,8 @@ import { IProvider, DefinedProvider } from './providers';
 import { Injector } from './injector';
 import { Interceptor } from '../interception/interceptor';
 import { InjectableData } from './injectable.decorator';
-import { genIdentifierHash } from '../helpers/hashgen';
 
-interface IGetContext {
+export interface IGetContext {
     identifier: any;
     need: boolean;
     resolving: Object[];
@@ -70,11 +69,11 @@ export class ProviderContainer {
             }
         }
 
-        const isResolving = ctx.resolving.indexOf(resolved.provider);
+        const isResolving = ctx.resolving.indexOf(ctx.identifier);
         if (isResolving != -1) {
-            throw 'Circular dependencie detected on provider: ' + resolved.provider.toString();
+            throw 'Circular dependencie detected on provider: ' + ctx.identifier.toString();
         }
-        ctx.resolving.push(resolved.provider);
+        ctx.resolving.push(ctx.identifier);
 
         const obj = resolved.provider.get({
             identifier: ctx.identifier,
@@ -82,7 +81,7 @@ export class ProviderContainer {
             extraData: ctx.extraData
         });
 
-        const index = ctx.resolving.indexOf(resolved.provider);
+        const index = ctx.resolving.indexOf(ctx.identifier);
         ctx.resolving.splice(index, 1);
         return obj;
     }
@@ -91,6 +90,32 @@ export class ProviderContainer {
         const isInjectable = Reflect.getOwnMetadata('injectable:is', target);
         if (!isInjectable) {
             throw 'Injectable class need to be defined with Injectable decorator!\n' + target.toString();
+        }
+
+        let deepCustomsProviders: IProvider[] | undefined;
+        if (providers && providers.length > 0) {
+            deepCustomsProviders = new Array<IProvider>().concat(providers);
+        }
+        if (ctx.customs && ctx.customs.length > 0) {
+            if (deepCustomsProviders) {
+                deepCustomsProviders = deepCustomsProviders.concat(ctx.customs);
+            }
+            else {
+                deepCustomsProviders = new Array<IProvider>().concat(ctx.customs);
+            }
+        }
+
+        let deepExtraData: any[] | undefined;
+        if (extraData && extraData.length > 0) {
+            deepExtraData = new Array<any>().concat(extraData);
+        }
+        if (ctx.extraData && ctx.extraData.length > 0) {
+            if (deepExtraData) {
+                deepExtraData = deepExtraData.concat(ctx.extraData);
+            }
+            else {
+                deepExtraData = new Array<any>().concat(ctx.extraData);
+            }
         }
 
         const args = (Reflect.getOwnMetadata('design:paramtypes', target) || []) as any[];
@@ -112,50 +137,25 @@ export class ProviderContainer {
                 isNeed = true;
             }
 
-            let deepCustomsProviders: IProvider[] | undefined;
-            if (providers && providers.length > 0) {
-                deepCustomsProviders = new Array<IProvider>().concat(providers);
-            }
-            if (ctx.customs && ctx.customs.length > 0) {
-                if (deepCustomsProviders) {
-                    deepCustomsProviders = deepCustomsProviders.concat(ctx.customs);
-                }
-                else {
-                    deepCustomsProviders = new Array<IProvider>().concat(ctx.customs);
-                }
-            }
-
-            let deepExtraData: any[] | undefined;
-            if (extraData && extraData.length > 0) {
-                deepExtraData = new Array<any>().concat(extraData);
-            }
-            if (ctx.extraData && ctx.extraData.length > 0) {
-                if (deepExtraData) {
-                    deepExtraData = deepExtraData.concat(ctx.extraData);
-                }
-                else {
-                    deepExtraData = new Array<any>().concat(ctx.extraData);
-                }
-            }
-
-            const obj = this.getIntern({
+            objs.push(this.getIntern({
                 identifier: identify,
                 need: isNeed,
                 resolving: ctx.resolving,
                 customs: deepCustomsProviders,
                 extraData: deepExtraData
-            });
-            if (obj) {
-                objs.push(obj);
-            }
-            else {
-                objs.push(undefined);
-            }
+            }));
         }
 
         const result = new (<ObjectConstructor>target)(...objs);
         if (this.interceptor) {
-            this.interceptor.applyProxy(target, result, this.injector)
+            this.interceptor.applyProxy({
+                cls: target,
+                instance: result,
+                getIntern: this.getIntern.bind(this),
+                resolving: ctx.resolving,
+                customs: deepCustomsProviders,
+                extraData: deepExtraData
+            });
         }
         return result;
     }

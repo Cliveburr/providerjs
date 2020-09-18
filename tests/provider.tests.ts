@@ -161,14 +161,13 @@ class TestEight {
     public value8 = 'test eight';
 
     constructor(
-        public testTwo: TestTwo
     ) {
     }
 }
 const providerEight = new StaticProvider(TestOne, TestEight);
 containerTree.providers?.push(providerEight);
 const testEight = <TestEight>containerTree.get(TestOne);
-if (testEight.value8 != 'test eight' || testEight.testTwo.value2 != 'test two') {
+if (testEight.value8 != 'test eight') {
     throw 'bug 8';
 }
 
