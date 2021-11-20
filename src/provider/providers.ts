@@ -4,6 +4,7 @@ export interface InjectorContext {
     identifier: any;
     create(target: Object, providers?: IProvider[], extraData?: any[]): any;
     extraData?: any[];
+    get(identifier: any, need?: boolean, customs?: IProvider[], extraData?: any[]): any;
 }
 
 export interface IProvider {

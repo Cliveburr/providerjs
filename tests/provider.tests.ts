@@ -87,7 +87,7 @@ try
         throw 'bug 4 provider';
     }
 }
-catch (err)
+catch (err: any)
 {
     if (!err.toString().startsWith('Can\'t find provider for identifier')) {
         throw 'bug 4 wrong error';

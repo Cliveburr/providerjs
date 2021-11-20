@@ -78,12 +78,40 @@ export class ProviderContainer {
         const obj = resolved.provider.get({
             identifier: ctx.identifier,
             create: this.create.bind(resolved.container, ctx),
-            extraData: ctx.extraData
+            extraData: ctx.extraData,
+            get: this.getOnResolve.bind(resolved.container, ctx)
         });
 
         const index = ctx.resolving.indexOf(ctx.identifier);
         ctx.resolving.splice(index, 1);
         return obj;
+    }
+
+    private getOnResolve(ctx: IGetContext, identifier: any, need?: boolean, customs?: IProvider[], extraData?: any[]): any {
+        const newCtx = {
+            identifier,
+            need: typeof need === 'undefined' ? true: need,
+            resolving: ctx.resolving,
+            customs,
+            extraData
+        }
+        if (ctx.customs) {
+            if (newCtx.customs) {
+                newCtx.customs = newCtx.customs.concat(ctx.customs);
+            }
+            else {
+                newCtx.customs = new Array<IProvider>().concat(ctx.customs);
+            }
+        }
+        if (ctx.extraData) {
+            if (newCtx.extraData) {
+                newCtx.extraData = newCtx.extraData.concat(ctx.extraData);
+            }
+            else {
+                newCtx.extraData = new Array<IProvider>().concat(ctx.extraData);
+            }
+        }
+        return this.getIntern(newCtx);
     }
 
     private create(ctx: IGetContext, target: Object, providers?: IProvider[], extraData?: any[]): any {
