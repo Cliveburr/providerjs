@@ -15,7 +15,7 @@ class TestOne {
     public value1 = 'test one';
 }
 const providerOne = new StaticProvider(TestOne);
-containerOne.providers?.push(providerOne);
+containerOne.providers.push(providerOne);
 const testOne = <TestOne>containerOne.get(TestOne);
 if (testOne.value1 != 'test one') {
     throw 'bug 1';
@@ -33,7 +33,7 @@ class TestTwo {
     }
 }
 const providerTwo = new AsRequestProvider(TestTwo);
-containerOne.providers?.push(providerTwo);
+containerOne.providers.push(providerTwo);
 const testTwo = <TestTwo>containerOne.get(TestTwo);
 if (testTwo.value2 != 'test two' || testTwo.testOne.value1 != 'test one') {
     throw 'bug 2';
@@ -43,10 +43,10 @@ if (testTwo.value2 != 'test two' || testTwo.testOne.value1 != 'test one') {
 const containerTwo = new ProviderContainer([], [], []);
 
 // importing containerOne into containerTwo
-containerTwo.imports?.push(containerOne);
+containerTwo.imports.push(containerOne);
 
 // exporting TestTwo on containerOne
-containerOne.exports?.push(providerTwo);
+containerOne.exports.push(providerTwo);
 
 // resolving provider in containerTwo direct
 // with argument in containerOne
@@ -61,7 +61,7 @@ class TestTree {
     }
 }
 const providerTree = new StaticProvider(TestTree);
-containerTwo.providers?.push(providerTree);
+containerTwo.providers.push(providerTree);
 const testTree = <TestTree>containerTwo.get(TestTree);
 if (testTree.value3 != 'test tree' || testTree.testTwo.testOne.value1 != 'test one') {
     throw 'bug 4';
@@ -78,7 +78,7 @@ class TestFour {
     ) {
     }
 }
-containerOne.providers?.push(new StaticProvider(TestFour));
+containerOne.providers.push(new StaticProvider(TestFour));
 let mustBeError = false;
 try
 {
@@ -104,7 +104,7 @@ if (!mustBeError) {
 const containerTree = new ProviderContainer([], [], []);
 
 // importing containerOne into containerTree
-containerTree.imports?.push(containerOne);
+containerTree.imports.push(containerOne);
 
 // adding new provider into containerOne
 @Injectable()
@@ -116,7 +116,7 @@ class TestFive {
     }
 }
 const providerFive = new StaticProvider(TestFive);
-containerOne.providers?.push(providerFive);
+containerOne.providers.push(providerFive);
 
 // adding new provider into containerOne that need provider in containerOne
 // exporting this provider
@@ -130,8 +130,8 @@ class TestSix {
     }
 }
 const providerSix = new StaticProvider(TestSix);
-containerOne.providers?.push(providerSix);
-containerOne.exports?.push(providerSix);
+containerOne.providers.push(providerSix);
+containerOne.exports.push(providerSix);
 
 // resolving provider in containerTree
 // with argument on containerOne exported
@@ -165,7 +165,7 @@ class TestEight {
     }
 }
 const providerEight = new StaticProvider(TestOne, TestEight);
-containerTree.providers?.push(providerEight);
+containerTree.providers.push(providerEight);
 const testEight = <TestEight>containerTree.get(TestOne);
 if (testEight.value8 != 'test eight') {
     throw 'bug 8';

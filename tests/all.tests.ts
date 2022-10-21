@@ -19,8 +19,8 @@
 
 // require('./extraData.tests');
 
-//require('./deep-customs-providers.tests');
+require('./deep-customs-providers.tests');
 
-require('./getOnResolve.tests');
+// require('./getOnResolve.tests');
 
 console.log('tests end!');
