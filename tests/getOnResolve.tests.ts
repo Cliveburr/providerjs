@@ -10,7 +10,7 @@ console.log('getOnResolve Begin');
 
 @Injectable()
 export class OneService {
-    public value = false;
+    public isOriginalService = true;
 }
 
 export class OneProvider implements IProvider {
@@ -27,7 +27,7 @@ export class OneProvider implements IProvider {
 
 @Injectable()
 export class GetOnService {
-    public value = true;
+    public isOriginalService = false;
 }
 
 const oneProvider = new OneProvider();
@@ -42,10 +42,10 @@ export class OneModule {
     public constructor(
         oneService: OneService
     ) {
-        if (oneService.value) {
+        if (oneService.isOriginalService) {
             throw 'getOnResolve fail!';
         }
-        console.log('OneModule constructor: OneService: ' + oneService.value);
+        console.log('OneModule constructor: OneService: ' + oneService.isOriginalService);
     }
 }
 

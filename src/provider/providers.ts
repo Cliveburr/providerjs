@@ -33,7 +33,7 @@ export class StaticProvider extends BasicProvider implements IProvider {
         super();
         this.cls = cls || identifier;
         const dataIdentity = super.getCustomIdentity(this.cls);
-        this.identifier = identifier || dataIdentity;
+        this.identifier = dataIdentity || identifier;
     }
 
     public identify(identifier: any): boolean {
@@ -58,7 +58,7 @@ export class DefinedProvider extends BasicProvider implements IProvider {
     ) {
         super();
         const dataIdentity = super.getCustomIdentity(instance.constructor);
-        this.identifier = identifier || dataIdentity;
+        this.identifier = dataIdentity || identifier;
     }
 
     public identify(identifier: any): boolean {
